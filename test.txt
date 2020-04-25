@@ -1,9 +1,0 @@
-does this work?
-here is a second line.
-three
-four
-five
-etc.
-etc.
-this is an awesome text editor
-that doesn't work quite yet

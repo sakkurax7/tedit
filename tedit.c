@@ -18,7 +18,7 @@
 #include <unistd.h>
 
 // Defines
-#define TEDIT_VERSION "0.0.1"
+#define TEDIT_VERSION "0.0.3"
 #define TEDIT_TAB_STOP 8
 #define TEDIT_QUIT_TIMES 3
 

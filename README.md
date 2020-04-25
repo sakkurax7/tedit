@@ -5,7 +5,7 @@ Recompile the source with
 ```
 make
 ```
-you can now run this at ./tedit or to install just clone the repository and
+you can now run this as ./tedit or to install just clone the repository and
 
 ```
 chmod +x install.sh

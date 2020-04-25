@@ -1,7 +1,11 @@
 # tedit
 Terminal text editor made in raw C. 
 
-To install just clone the repository and
+Recompile the source with
+```
+make
+```
+you can now run this at ./tedit or to install just clone the repository and
 
 ```
 chmod +x install.sh

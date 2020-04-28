@@ -21,6 +21,7 @@
 #define TEDIT_VERSION "1.0.3"
 #define TEDIT_TAB_STOP 8
 #define TEDIT_QUIT_TIMES 3
+#define TEDIT_OPEN_TIMES 3
 
 #define CTRL_KEY(k) ((k) & 0x1f)
 
@@ -120,6 +121,7 @@ struct editorSyntax HLDB[] = {
 #define HLDB_ENTRIES (sizeof(HLDB) / sizeof(HLDB[0]))
 
 // Prototyes
+void initEditor();
 void editorSetStatusMessage(const char *fmt, ...);
 void editorRefreshScreen();
 char *editorPrompt(char *prompt, void(*callback)(char *, int));
@@ -697,6 +699,21 @@ void editorOpen(char *filename)
 	E.dirty = 0;
 }
 
+void editorOpenFromEdit()
+{
+	// I don't know why it's not letting us use E.filename instead of
+	// *file right now, but it's not working. fopen will throw a 
+	// file not found error. This works tho
+	char *file;
+	file = editorPrompt("Open file: %s (ESC to cancel)", NULL);
+	if (file == NULL) {
+		editorSetStatusMessage("Open aborted");
+		return;
+	}
+	initEditor();
+	editorOpen(file);
+}
+
 // TODO: This should in the future create a temporary file and
 //       write to that, then renaming the temp file to the file
 //       name that we want to write to but for now this works.
@@ -931,11 +948,7 @@ void editorDrawRows(struct abuf *ab)
 			}
 			abAppend(ab, "\x1b[39m", 5);
 		}
-<<<<<<< HEAD
-=======
 		
->>>>>>> master
-
 		abAppend(ab, "\x1b[K", 3);
 		abAppend(ab, "\r\n", 2);
 	}
@@ -1102,6 +1115,7 @@ void editorMoveCursor(int key)
 void editorProcessKeypress()
 {
 	static int quit_times = TEDIT_QUIT_TIMES;
+	static int open_times = TEDIT_OPEN_TIMES;
 
 	int c = editorReadKey();
 
@@ -1113,7 +1127,7 @@ void editorProcessKeypress()
 		case CTRL_KEY('q'):
 			if (E.dirty && quit_times > 0)
 			{
-				editorSetStatusMessage("WARNING: File has unsaved changes!!"
+				editorSetStatusMessage("WARNING: File has unsaved changes!! "
 										"Press Ctrl-Q %d more times to quit.", quit_times);
 				quit_times--;
 				return;
@@ -1121,6 +1135,17 @@ void editorProcessKeypress()
 			write(STDOUT_FILENO, "\x1b[2J", 4); // Clear the screen
  			write(STDOUT_FILENO, "\x1b[H", 3); 
 			exit(0);
+			break;
+
+		case CTRL_KEY('o'):
+			if (E.dirty && open_times > 0)
+			{
+				editorSetStatusMessage("WARNING: File has unsaved changes!! "
+										"Press Ctrl-O %d more times to ovewrite.", open_times);
+				open_times--;
+				return;
+			}
+			editorOpenFromEdit();
 			break;
 
 		case CTRL_KEY('s'):
@@ -1180,6 +1205,7 @@ void editorProcessKeypress()
 			break;
 	}
 	quit_times = TEDIT_QUIT_TIMES;
+	open_times = TEDIT_OPEN_TIMES;
 }
 
 // Init
@@ -1213,7 +1239,7 @@ int main(int argc, char *argv[])
 	}
 
 	editorSetStatusMessage(
-		"HELP: Ctrl-Q = quit | Ctrl-S = save | Ctrl-F = find"
+		"HELP: Ctrl-Q to quit | Ctrl-S to save | Ctrl-F to find | Ctrl-O to open"
 		);
 
 	while (1) 

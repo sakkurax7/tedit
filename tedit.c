@@ -1235,7 +1235,12 @@ int main(int argc, char *argv[])
 	initEditor();
 	if (argc >= 2)
 	{
-		editorOpen(argv[1]);
+		if ( access(argv[1], F_OK) != -1) 
+		{
+			editorOpen(argv[1]);
+		} else {
+			E.filename = argv[1];
+		}
 	}
 
 	editorSetStatusMessage(

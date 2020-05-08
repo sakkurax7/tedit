@@ -8,6 +8,7 @@
 #include <unistd.h>
 #include "tedit.h"
 #include "rowOps.h"
+#include "input.h"
 
 char *editorRowsToString(int *buflen)
 {

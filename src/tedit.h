@@ -92,12 +92,15 @@ extern char *C_HL_keywords[];
 // HLDB
 extern struct editorSyntax HLDB[];
 
+extern struct abuf {
+	char *b;
+	int len;
+};
+
+#define ABUF_INIT {NULL, 0};
+
 void die(const char *s);
-void editorUpdateSyntax(erow *row);
-void editorSelectSyntaxHighlight();
 void initEditor();
-void editorSetStatusMessage(const char *fmt, ...);
-void editorRefreshScreen();
-char *editorPrompt(char *prompt, void(*callback)(char *, int));
+
 
 #endif

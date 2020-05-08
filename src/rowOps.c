@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+#include "appendBuffer.h"
 #include "tedit.h"
  
 // Row Operations

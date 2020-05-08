@@ -1,4 +1,13 @@
-# Clean this up
+CC       = gcc
+CFLAGS   = -Wall -Wextra -Wno-incompatible-pointer-types -pedantic -std=c99 -D_POSIX_C_SOURCE=200809L
+LDFLAGS  = 
+OBJFILES = src/tedit.o src/canonical.o src/rowOps.o src/editorOps.o src/fileIO.o src/find.o src/input.o src/output.o src/appendBuffer.o src/syntaxHighlighting.o
+TARGET   = tedit
 
-tedit: src/tedit.c
-	$(CC) src/tedit.c src/canonical.c src/rowOps.c src/editorOps.c src/fileIO.c src/find.c src/input.c src/output.c src/appendBuffer.c src/syntaxHighlighting.c -o tedit -Wall -Wextra -Wno-incompatible-pointer-types -pedantic -std=c99 -D_POSIX_C_SOURCE=200809L
+all: $(TARGET)
+
+$(TARGET): $(OBJFILES)
+	$(CC) $(CFLAGS) -o $(TARGET) $(OBJFILES) $(LDFLAGS)
+
+clean:
+	rm -f $(OBJFILES) $(TARGET) *~

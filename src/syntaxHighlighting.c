@@ -5,6 +5,23 @@
 #include <time.h>
 #include "tedit.h"
 
+char *C_HL_extensions[] = { ".c", ".cpp", ".h", NULL};
+char *C_HL_keywords[] = { "switch", "if", "while", "for", "break", "continue", "return", "else",
+  "struct", "union", "typedef", "static", "enum", "class", "case",
+  "int|", "long|", "double|", "float|", "char|", "unsigned|", "signed|",
+  "void|", NULL };
+
+struct editorSyntax HLDB[] = {
+	{
+		"c",
+		C_HL_extensions,
+		C_HL_keywords,
+		"//", "/*", "*/",
+		HL_HIGHLIGHT_NUMERS | HL_HIGHLIGHT_STRINGS
+	}
+};
+#define HLDB_ENTRIES (sizeof(HLDB) / sizeof(HLDB[0]))
+
 int is_seperator(int c)
 {
 	return isspace(c) || c == '\0' || strchr(",.()+-/*=~%<>[];", c) != NULL;
@@ -159,5 +176,36 @@ int editorSyntaxToColor(int hl)
 		case HL_NUMBER: return 31; // Numbers are red
 		case HL_MATCH: return 34; // Forground blue
 		default: return 37;
+	}
+}
+
+void editorSelectSyntaxHighlight()
+{
+	E.syntax = NULL;
+	if (E.filename == NULL) return;
+
+	char *ext = strrchr(E.filename, '.');
+
+	for (unsigned int j = 0; j<HLDB_ENTRIES; j++)
+	{
+		struct editorSyntax *s = &HLDB[j];
+		unsigned int i = 0;
+		while (s->filematch[i])
+		{
+			int is_ext = (s->filematch[i][0] == '.');
+			if ((is_ext && ext && !strcmp(ext, s->filematch[i])) ||
+				(!is_ext && strstr(E.filename, s->filematch[i])))
+				{
+					E.syntax = s;
+
+					for (int filerow = 0; filerow<E.numrows; filerow++)
+					{
+						editorUpdateSyntax(&E.row[filerow]);
+					}
+
+					return;
+				}
+				i++;
+		}
 	}
 }

@@ -8,6 +8,7 @@
 #include "canonical.h"
 #include "fileIO.h"
 #include "output.h"
+#include "find.h"
 
 
 char *editorPrompt(char *prompt, void (*callback)(char *, int))

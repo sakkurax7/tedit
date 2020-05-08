@@ -3,6 +3,7 @@
 #include <time.h>
 #include "appendBuffer.h"
 #include "tedit.h"
+#include "syntaxHighlighting.h"
  
 // Row Operations
 

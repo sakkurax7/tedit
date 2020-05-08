@@ -26,27 +26,6 @@
 #include "appendBuffer.h"
 #include "syntaxHighlighting.h"
 
-// FIletypes
-
-char *C_HL_extensions[] = { ".c", ".cpp", ".h", NULL};
-char *C_HL_keywords[] = { "switch", "if", "while", "for", "break", "continue", "return", "else",
-  "struct", "union", "typedef", "static", "enum", "class", "case",
-  "int|", "long|", "double|", "float|", "char|", "unsigned|", "signed|",
-  "void|", NULL };
-
-// HLDB = hlighlight database
-struct editorSyntax HLDB[] = {
-	{
-		"c",
-		C_HL_extensions,
-		C_HL_keywords,
-		"//", "/*", "*/",
-		HL_HIGHLIGHT_NUMERS | HL_HIGHLIGHT_STRINGS
-	}
-};
-#define HLDB_ENTRIES (sizeof(HLDB) / sizeof(HLDB[0]))
-
-
 // Print error message and exit the program
 void die(const char *s)
 {
@@ -55,40 +34,6 @@ void die(const char *s)
 
 	perror(s);
 	exit(1);
-}
-
-// Syntax highlighting
-
-
-void editorSelectSyntaxHighlight()
-{
-	E.syntax = NULL;
-	if (E.filename == NULL) return;
-
-	char *ext = strrchr(E.filename, '.');
-
-	for (unsigned int j = 0; j<HLDB_ENTRIES; j++)
-	{
-		struct editorSyntax *s = &HLDB[j];
-		unsigned int i = 0;
-		while (s->filematch[i])
-		{
-			int is_ext = (s->filematch[i][0] == '.');
-			if ((is_ext && ext && !strcmp(ext, s->filematch[i])) ||
-				(!is_ext && strstr(E.filename, s->filematch[i])))
-				{
-					E.syntax = s;
-
-					for (int filerow = 0; filerow<E.numrows; filerow++)
-					{
-						editorUpdateSyntax(&E.row[filerow]);
-					}
-
-					return;
-				}
-				i++;
-		}
-	}
 }
 
 // Init

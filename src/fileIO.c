@@ -9,6 +9,8 @@
 #include "tedit.h"
 #include "rowOps.h"
 #include "input.h"
+#include "output.h"
+#include "syntaxHighlighting.h"
 
 char *editorRowsToString(int *buflen)
 {

@@ -86,11 +86,6 @@ struct editorConfig
 
 struct editorConfig E;
 
-extern char *C_HL_extensions[];
-extern char *C_HL_keywords[];
-
-// HLDB
-extern struct editorSyntax HLDB[];
 
 extern struct abuf {
 	char *b;

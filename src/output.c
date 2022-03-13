@@ -49,7 +49,7 @@ void editorDrawRows(struct abuf *ab)
 			{
 				char welcome[80];
 				int welcomelen = snprintf(welcome, sizeof(welcome),
-								"tEdit editor -- verison %s", TEDIT_VERSION);
+								"tEdit editor -- version %s", TEDIT_VERSION);
 				if(welcomelen > E.screencols) welcomelen = E.screencols;
 				int padding = (E.screencols - welcomelen) / 2;
 				if (padding)
@@ -71,7 +71,7 @@ void editorDrawRows(struct abuf *ab)
 			int current_color = -1;
 			for (int j = 0; j<len; j++)
 			{
-				if (iscntrl(c[j]))
+				if (iscntrl((int)c[j]))
 				{
 					char sym = (c[j] <= 26) ? '@' + c[j] : '?';
 					abAppend(ab, "\x1b[7m", 4);

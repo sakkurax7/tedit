@@ -6,11 +6,11 @@ chmod +x tedit
 
 cp tedit $HOME/.bin
 
-export PATH=$PATH:~/.bin
+export PATH=$PATH:$HOME/.bin
 
-if [[ "$SHELL" == "/bin/bash" ]]; then
-	
-	echo "export PATH=$PATH:~/.bin" >> ~/.bashrc
-elif [[ "$SHELL" = "/bin/zsh" ]]; then
+if [[ "$SHELL" == "/bin/bash" ]] || [[ "$SHELL" == "/usr/bin/bash" ]]; then
+	echo "export PATH=$PATH:~/.bin" >> ~/.bashrc 
+elif [[ "$SHELL" = "/bin/zsh" ]] || [[ "SHELL" == "/usr/bin/zsh" ]]; then
 	echo "export PATH=$PATH:~/.bin" >> ~/.zshrc
-fi 
+fi
+

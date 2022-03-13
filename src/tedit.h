@@ -84,13 +84,14 @@ struct editorConfig
 	struct termios orig_termios;
 };
 
-struct editorConfig E;
-
-
-extern struct abuf {
+struct abuf 
+{
 	char *b;
 	int len;
 };
+
+
+extern struct editorConfig E;
 
 #define ABUF_INIT {NULL, 0};
 

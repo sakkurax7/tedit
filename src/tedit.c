@@ -26,6 +26,9 @@
 #include "appendBuffer.h"
 #include "syntaxHighlighting.h"
 
+
+struct editorConfig E;
+
 // Print error message and exit the program
 void die(const char *s)
 {
@@ -59,7 +62,7 @@ void initEditor()
 
 int main(int argc, char *argv[]) 
 {
-	enableRawMode(E); 
+	enableRawMode(&E); 
 	initEditor();
 	if (argc >= 2)
 	{

@@ -1,5 +1,5 @@
 # tedit
-Terminal text editor made in raw C. (No longer compiles for some reason)
+Terminal text editor made in raw C.
 
 Recompile the source with
 ```

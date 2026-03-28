@@ -1,11 +1,12 @@
-#ifndef OUTPUT_C_
-#define OUTPUT_C_
+#ifndef OUTPUT_H
+#define OUTPUT_H
 
+#include "appendBuffer.h"
 
-void editorScroll();
+void editorScroll(void);
 void editorDrawRows(struct abuf *ab);
 void editorDrawStatusBar(struct abuf *ab);
-void editorRefreshScreen();
+void editorRefreshScreen(void);
 void editorSetStatusMessage(const char *fmt, ...);
 
 #endif

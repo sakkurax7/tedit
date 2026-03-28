@@ -1,9 +1,3 @@
-// Includes
-
-#define _DEFAULT_SOURCE      // Make GCC not complain about getline()
-#define _BSD_SOURCE          // Add feature test macro.
-#define _GNU_SOURCE          // Also makes code more portible.
-
 #include <ctype.h>
 #include <errno.h>
 #include <fcntl.h>
@@ -25,49 +19,66 @@
 #include "output.h"
 #include "appendBuffer.h"
 #include "syntaxHighlighting.h"
+#include "config.h"
 
 
 struct editorConfig E;
 
-// Print error message and exit the program
-void die(const char *s)
+void die(const char *message)
 {
-	write(STDOUT_FILENO, "\x1b[2J", 4); // This line and next clear the screen
+	write(STDOUT_FILENO, "\x1b[2J", 4);
 	write(STDOUT_FILENO, "\x1b[H", 3);
-
-	perror(s);
-	exit(1);
+	perror(message);
+	exit(EXIT_FAILURE);
 }
 
-// Init
-
-void initEditor()
+void editorResetDocument(void)
 {
+	for (int row_index = 0; row_index < E.numrows; row_index++) {
+		editorFreeRow(&E.row[row_index]);
+	}
+
+	free(E.row);
+	E.row = NULL;
+	E.numrows = 0;
 	E.cx = 0;
 	E.cy = 0;
 	E.rx = 0;
+	E.preferred_rx = -1;
 	E.rowoff = 0;
 	E.coloff = 0;
-	E.numrows = 0;
-	E.row = NULL;
 	E.dirty = 0;
-	E.filename = NULL;
-	E.statusmsg[0] = '\0';
-	E.statusmsg_time = 0;
 	E.syntax = NULL;
-	
-	if (getWindowSize(&E.screenrows, &E.screencols) == -1) die("getWindwowSize");
+}
+
+void initEditor(void)
+{
+	memset(&E, 0, sizeof(E));
+	E.preferred_rx = -1;
+	E.filename = NULL;
+	E.settings.tab_stop = 4;
+	E.settings.quit_confirmations = 3;
+	E.settings.open_confirmations = 3;
+	E.settings.show_line_numbers = true;
+	E.settings.soft_wrap = true;
+	E.settings.soft_indent = true;
+	E.settings.auto_indent = true;
+
+	editorLoadConfig();
+
+	if (getWindowSize(&E.screenrows, &E.screencols) == -1) {
+		die("getWindowSize");
+	}
 	E.screenrows -= 2;
 }
 
-int main(int argc, char *argv[]) 
+int main(int argc, char *argv[])
 {
-	enableRawMode(&E); 
 	initEditor();
-	if (argc >= 2)
-	{
-		if ( access(argv[1], F_OK) != -1) 
-		{
+	enableRawMode(&E);
+
+	if (argc >= 2) {
+		if (access(argv[1], F_OK) != -1) {
 			editorOpen(argv[1]);
 		} else {
 			E.filename = argv[1];
@@ -75,15 +86,12 @@ int main(int argc, char *argv[])
 	}
 
 	editorSetStatusMessage(
-		"HELP: Ctrl-Q to quit | Ctrl-S to save | Ctrl-F to find | Ctrl-O to open"
-		);
+		"HELP: Ctrl-Q quit | Ctrl-S save | Ctrl-F find | Ctrl-O open");
 
-	while (1) 
-	{
+	while (1) {
 		editorRefreshScreen();
 		editorProcessKeypress();
 	}
 
 	return 0;
-
 }

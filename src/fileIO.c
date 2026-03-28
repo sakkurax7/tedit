@@ -1,83 +1,92 @@
+#define _POSIX_C_SOURCE 200809L
+
 #include <errno.h>
+#include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <fcntl.h>
 #include <unistd.h>
-#include "tedit.h"
-#include "rowOps.h"
+
+#include "fileIO.h"
 #include "input.h"
 #include "output.h"
+#include "rowOps.h"
 #include "syntaxHighlighting.h"
+#include "tedit.h"
 
-char *editorRowsToString(int *buflen)
+char *editorRowsToString(size_t *buflen)
 {
-	int totlen = 0;
-	int j;
-	for (j = 0; j < E.numrows; j++)
-		totlen += E.row[j].size + 1;
-	*buflen = totlen;
+	size_t total_length = 0;
 
-	char *buf = malloc(totlen);
-	char *p = buf;
-	for (j = 0; j < E.numrows; j++)
-	{
-		memcpy(p, E.row[j].chars, E.row[j].size);
-		p += E.row[j].size;
-		*p = '\n';
-		p++;
+	for (int row_index = 0; row_index < E.numrows; row_index++) {
+		total_length += (size_t)E.row[row_index].size + 1;
+	}
+	*buflen = total_length;
+
+	char *buffer = malloc(total_length == 0 ? 1 : total_length);
+	if (buffer == NULL) {
+		die("malloc");
 	}
 
-	return buf;
+	char *cursor = buffer;
+	for (int row_index = 0; row_index < E.numrows; row_index++) {
+		memcpy(cursor, E.row[row_index].chars, (size_t)E.row[row_index].size);
+		cursor += E.row[row_index].size;
+		*cursor++ = '\n';
+	}
+
+	return buffer;
 }
 
-void editorOpen(char *filename)
+void editorOpen(const char *filename)
 {
 	free(E.filename);
 	E.filename = strdup(filename);
+	if (E.filename == NULL) {
+		die("strdup");
+	}
 
 	editorSelectSyntaxHighlight();
 
-	FILE *fp = fopen(filename, "r");
-	if (!fp) die ("fopen");
-	
-	char *line = NULL;
-	size_t linecap = 0;
-	ssize_t linelen;
-
-	while ((linelen = getline(&line, &linecap, fp)) != -1)
-	{
-		while (linelen > 0 && (line[linelen - 1] == '\n' ||
-								line[linelen - 1] == '\r'))
-			linelen--;
-		editorInsertRow(E.numrows, line, linelen);	
+	FILE *file = fopen(filename, "r");
+	if (file == NULL) {
+		die("fopen");
 	}
+
+	char *line = NULL;
+	size_t capacity = 0;
+	ssize_t line_length = 0;
+
+	while ((line_length = getline(&line, &capacity, file)) != -1) {
+		while (line_length > 0 &&
+		       (line[line_length - 1] == '\n' || line[line_length - 1] == '\r')) {
+			line_length--;
+		}
+
+		editorInsertRow(E.numrows, line, (size_t)line_length);
+	}
+
 	free(line);
-	fclose(fp);	
+	fclose(file);
 	E.dirty = 0;
 }
 
-void editorOpenFromEdit()
+void editorOpenFromEdit(void)
 {
-	char *file;
-	file = editorPrompt("Open file: %s (ESC to cancel)", NULL);
+	char *file = editorPrompt("Open file: %s (ESC to cancel)", NULL);
 	if (file == NULL) {
 		editorSetStatusMessage("Open aborted");
 		return;
 	}
-	initEditor();
+
+	editorResetDocument();
 	editorOpen(file);
+	free(file);
 }
 
-// TODO: This should in the future create a temporary file and
-//       write to that, then renaming the temp file to the file
-//       name that we want to write to but for now this works.
-void editorSave()
+void editorSave(void)
 {
-	if (E.filename == NULL) 
-	{
+	if (E.filename == NULL) {
 		E.filename = editorPrompt("Save as: %s (ESC to cancel)", NULL);
 		if (E.filename == NULL) {
 			editorSetStatusMessage("Save aborted");
@@ -86,25 +95,21 @@ void editorSave()
 		editorSelectSyntaxHighlight();
 	}
 
-	int len;
-	char *buf = editorRowsToString(&len);
+	size_t len = 0;
+	char *buffer = editorRowsToString(&len);
 
-	int fd = open(E.filename, O_RDWR | O_CREAT, 0644);
-	if (fd != -1)
-	{
-		if (ftruncate(fd, len) != -1)
-		{
-			if (write(fd, buf, len) == len)
-			{
-				close(fd);
-				free(buf);
-				E.dirty = 0;
-				editorSetStatusMessage("%d bytes written to disk", len);
-				return;
-			}
+	const int fd = open(E.filename, O_RDWR | O_CREAT, 0644);
+	if (fd != -1) {
+		if (ftruncate(fd, (off_t)len) != -1 && write(fd, buffer, len) == (ssize_t)len) {
+			close(fd);
+			free(buffer);
+			E.dirty = 0;
+			editorSetStatusMessage("%zu bytes written to disk", len);
+			return;
 		}
 		close(fd);
 	}
-	free(buf);
+
+	free(buffer);
 	editorSetStatusMessage("Can't save! I/O error: %s", strerror(errno));
 }

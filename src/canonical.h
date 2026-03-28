@@ -1,9 +1,11 @@
-#ifndef CANONICAL_C_
-#define CANONICAL_C_
+#ifndef CANONICAL_H
+#define CANONICAL_H
 
-void disableRawMode();
-void enableRawMode(struct editorConfig* E);
-int editorReadKey();
+#include "tedit.h"
+
+void disableRawMode(void);
+void enableRawMode(struct editorConfig *editor);
+int editorReadKey(void);
 int getCursorPosition(int *rows, int *cols);
 int getWindowSize(int *rows, int *cols);
 

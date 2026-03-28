@@ -1,0 +1,14 @@
+# Copy this file to:
+#   $XDG_CONFIG_HOME/tedit/config
+# or:
+#   ~/.config/tedit/config
+#
+# Values are key=value pairs.
+
+tab_stop=4
+quit_confirmations=2
+open_confirmations=2
+show_line_numbers=true
+soft_wrap=true
+soft_indent=true
+auto_indent=true

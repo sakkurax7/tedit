@@ -1,8 +1,8 @@
-#ifndef INPUT_C_
-#define INPUT_C_
+#ifndef INPUT_H
+#define INPUT_H
 
-char *editorPrompt(char *prompt, void (*callback)(char *, int));
+char *editorPrompt(const char *prompt, void (*callback)(char *, int));
 void editorMoveCursor(int key);
-void editorProcessKeypress();
+void editorProcessKeypress(void);
 
 #endif

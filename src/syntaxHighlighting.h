@@ -1,14 +1,15 @@
-#ifndef SYNTAX_HIGHLIGHTING_C_
-#define SYNTAX_HIGHLIGHTING_C_
+#ifndef SYNTAX_HIGHLIGHTING_H
+#define SYNTAX_HIGHLIGHTING_H
 
-extern char *C_HL_extensions[];
-extern char *C_HL_keywords[];
+#include "tedit.h"
 
-extern struct editorSyntax HLDB[];
+extern const char *const C_HL_extensions[];
+extern const char *const C_HL_keywords[];
+extern const struct editorSyntax HLDB[];
 
-int is_seperator(int c);
+int is_separator(int c);
 void editorUpdateSyntax(erow *row);
 int editorSyntaxToColor(int hl);
-void editorSelectSyntaxHighlight();
+void editorSelectSyntaxHighlight(void);
 
 #endif

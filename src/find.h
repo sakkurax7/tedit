@@ -1,7 +1,7 @@
-#ifndef FIND_C_
-#define FIND_C_
+#ifndef FIND_H
+#define FIND_H
 
 void editorFindCallback(char *query, int key);
-void editorFind();
+void editorFind(void);
 
 #endif

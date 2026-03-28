@@ -1,154 +1,206 @@
 /*
- *  Canonical mode, or cooked mode makes it so that every character that 
- *  is entered gets echoed. We obviously don't want this for a text editor, 
- *  so we must enter raw mode, which makes the terminal not echo everything
- *  that's typed. When the script starts it should enter raw mode, and when
- *  it ends it should exit so the user isn't stuck in raw mode.
+ * Raw mode setup and escape-sequence decoding for interactive editing.
  */
 
 #include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <time.h>
-#include <unistd.h>
 #include <sys/ioctl.h>
-#include "tedit.h"
+#include <unistd.h>
 
-void disableRawMode()
+#include "canonical.h"
+
+static int editorParseCsiSequence(const char *seq, size_t len)
 {
-	if (tcsetattr(STDIN_FILENO, TCSAFLUSH, &E.orig_termios) == -1)
-		die("tcsetattr");
-}
-
-void enableRawMode(struct editorConfig E) 
-{
-	if (tcgetattr(STDIN_FILENO, &E.orig_termios) == -1) die("tcgetattr");
-	atexit(disableRawMode);
-
-	struct termios raw = E.orig_termios;
-
-			// Unknown is various antiquated flags to turn off
-	raw.c_iflag &= ~(BRKINT | ICRNL | INPCK | ISTRIP | IXON); 		
-			// Disable unknown, ctrl-m, unknown, unknown, and 
-			// ctrl-s, ctrl-q (software flow control)
-	raw.c_oflag &= ~(OPOST); 
-			// Disable automatic conversion from \n to \r\n
-	raw.c_cflag |= (CS8);
-			// Unknown
-	raw.c_lflag &= ~(ECHO | ICANON | IEXTEN | ISIG); 
-			// Flips the bits for echo, canonical mode, ctrl-v,
-			// and interrupt signal (ctrl-c, ctrl-z)
-	
-	// Set timeout for read() so that it returns if if doesn't get any
-	// input for a certain amount of time
-	raw.c_cc[VMIN] = 0;  // Set minimum number of bytes is needed before
-			     // read() can return. 0 Means that it can return
-			     // instantly
-	raw.c_cc[VTIME] = 1; // Set maximum amount of time to wait before 
-			     // read() returns in tenths of seconds.
-
-	tcsetattr(STDIN_FILENO, TCSAFLUSH, &raw);
-
-	if (tcsetattr(STDIN_FILENO, TCSAFLUSH, &raw) == -1) die("tcsetattr");
-}
-
-int editorReadKey()
-{
-	int nread;
-	char c;
-
-	while ((nread = read(STDIN_FILENO, &c, 1)) != 1)
-	{
-		if (nread == -1 && errno != EAGAIN) die("read");
+	if (len == 1) {
+		switch (seq[0]) {
+		case 'A':
+			return ARROW_UP;
+		case 'B':
+			return ARROW_DOWN;
+		case 'C':
+			return ARROW_RIGHT;
+		case 'D':
+			return ARROW_LEFT;
+		case 'H':
+			return HOME_KEY;
+		case 'F':
+			return END_KEY;
+		default:
+			return '\x1b';
+		}
 	}
 
-	if (c == '\x1b')
-	{
-		char seq[3];
-
-		if (read(STDIN_FILENO, &seq[0], 1) != 1) return '\x1b';
-		if (read(STDIN_FILENO, &seq[1], 1) != 1) return '\x1b';
-
-		if (seq[0] == '[')
-		{
-			if (seq[1] >= '0' && seq[1] <= '9') 
-			{
-				if (read(STDIN_FILENO, &seq[2], 1) != 1) return '\x1b';
-				if (seq[2] == '~') 
-				{
-					switch (seq[1])
-					{
-						case '1': return HOME_KEY;
-						case '3': return DEL_KEY;
-						case '4': return END_KEY;
-						case '5': return PAGE_UP;
-						case '6': return PAGE_DOWN;
-						case '7': return HOME_KEY;
-						case '8': return END_KEY;
-					}
-				}
-			} else {
-				switch (seq[1]) 
-				{
-					case 'A': return ARROW_UP;
-					case 'B': return ARROW_DOWN;
-					case 'C': return ARROW_RIGHT;
-					case 'D': return ARROW_LEFT;
-					case 'H': return HOME_KEY;
-					case 'F': return END_KEY;
-				}
-			}
-		} else if (seq[0] == 'O') {
-			switch (seq[1]) 
-			{
-				case 'H': return HOME_KEY;
-				case 'F': return END_KEY;
-			}
+	if (len == 2 && seq[1] == '~') {
+		switch (seq[0]) {
+		case '1':
+		case '7':
+			return HOME_KEY;
+		case '3':
+			return DEL_KEY;
+		case '4':
+		case '8':
+			return END_KEY;
+		case '5':
+			return PAGE_UP;
+		case '6':
+			return PAGE_DOWN;
+		default:
+			return '\x1b';
 		}
+	}
 
-		return '\x1b';
-	} else {
+	int param1 = 0;
+	int modifier = 0;
+	char final = '\0';
+
+	if (sscanf(seq, "%d;%d%c", &param1, &modifier, &final) == 3 && modifier == 5) {
+		switch (final) {
+		case 'A':
+			return CTRL_ARROW_UP;
+		case 'B':
+			return CTRL_ARROW_DOWN;
+		case 'C':
+			return CTRL_ARROW_RIGHT;
+		case 'D':
+			return CTRL_ARROW_LEFT;
+		default:
+			return '\x1b';
+		}
+	}
+
+	return '\x1b';
+}
+
+void disableRawMode(void)
+{
+	if (tcsetattr(STDIN_FILENO, TCSAFLUSH, &E.orig_termios) == -1) {
+		die("tcsetattr");
+	}
+}
+
+void enableRawMode(struct editorConfig *editor)
+{
+	if (tcgetattr(STDIN_FILENO, &editor->orig_termios) == -1) {
+		die("tcgetattr");
+	}
+	atexit(disableRawMode);
+
+	struct termios raw = editor->orig_termios;
+
+	raw.c_iflag &= (tcflag_t) ~(BRKINT | ICRNL | INPCK | ISTRIP | IXON);
+	raw.c_oflag &= (tcflag_t) ~(OPOST);
+	raw.c_cflag |= CS8;
+	raw.c_lflag &= (tcflag_t) ~(ECHO | ICANON | IEXTEN | ISIG);
+	raw.c_cc[VMIN] = 0;
+	raw.c_cc[VTIME] = 1;
+
+	if (tcsetattr(STDIN_FILENO, TCSAFLUSH, &raw) == -1) {
+		die("tcsetattr");
+	}
+}
+
+int editorReadKey(void)
+{
+	char c;
+
+	for (;;) {
+		const ssize_t nread = read(STDIN_FILENO, &c, 1);
+		if (nread == 1) {
+			break;
+		}
+		if (nread == -1 && errno != EAGAIN) {
+			die("read");
+		}
+	}
+
+	if (c != '\x1b') {
 		return c;
 	}
 
-	return c;
+	char seq[16];
+	size_t len = 0;
+
+	if (read(STDIN_FILENO, &seq[0], 1) != 1) {
+		return '\x1b';
+	}
+
+	if (seq[0] == 'O') {
+		if (read(STDIN_FILENO, &seq[1], 1) != 1) {
+			return '\x1b';
+		}
+
+		switch (seq[1]) {
+		case 'H':
+			return HOME_KEY;
+		case 'F':
+			return END_KEY;
+		default:
+			return '\x1b';
+		}
+	}
+
+	if (seq[0] != '[') {
+		return '\x1b';
+	}
+
+	while (len < sizeof(seq) - 1) {
+		if (read(STDIN_FILENO, &seq[len], 1) != 1) {
+			return '\x1b';
+		}
+		if ((seq[len] >= 'A' && seq[len] <= 'Z') || seq[len] == '~') {
+			len++;
+			break;
+		}
+		len++;
+	}
+
+	seq[len] = '\0';
+	return editorParseCsiSequence(seq, len);
 }
 
 int getCursorPosition(int *rows, int *cols)
 {
 	char buf[32];
-	unsigned int i = 0;
-	
-	if (write(STDOUT_FILENO, "\x1b[6n", 4) != 4) return -1;
+	size_t i = 0;
 
-	printf("\r\n");
-	
-	while (i < sizeof(buf) - 1)
-	{
-		if (read(STDIN_FILENO, &buf[i], 1) != 1) break;
-		if (buf[i] == 'R') break;
+	if (write(STDOUT_FILENO, "\x1b[6n", 4) != 4) {
+		return -1;
+	}
+
+	while (i < sizeof(buf) - 1) {
+		if (read(STDIN_FILENO, &buf[i], 1) != 1) {
+			break;
+		}
+		if (buf[i] == 'R') {
+			break;
+		}
 		i++;
 	}
 	buf[i] = '\0';
 
-	if (buf[0] != '\x1b' || buf[1] != '[') return -1;
-	if (sscanf(&buf[2], "%d;%d", rows, cols) != 2) return -1;
+	if (buf[0] != '\x1b' || buf[1] != '[') {
+		return -1;
+	}
+	if (sscanf(&buf[2], "%d;%d", rows, cols) != 2) {
+		return -1;
+	}
 
 	return 0;
 }
-
 
 int getWindowSize(int *rows, int *cols)
 {
 	struct winsize ws;
 
-	if (ioctl(STDOUT_FILENO, TIOCGWINSZ, &ws) == -1 || ws.ws_col == 0)
-	{
-		if (write(STDOUT_FILENO, "\x1b[999C\x1b[999B", 12) != 12) return -1;
+	if (ioctl(STDOUT_FILENO, TIOCGWINSZ, &ws) == -1 || ws.ws_col == 0) {
+		if (write(STDOUT_FILENO, "\x1b[999C\x1b[999B", 12) != 12) {
+			return -1;
+		}
 		return getCursorPosition(rows, cols);
-	} else {
-		*cols = ws.ws_col;
-		*rows = ws.ws_row;
-		return 0;
 	}
+
+	*cols = ws.ws_col;
+	*rows = ws.ws_row;
+	return 0;
 }
